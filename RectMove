@@ -1,0 +1,489 @@
+unit RectMove;
+
+interface
+
+uses
+  System.SysUtils, System.Types, System.UITypes, System.Classes, System.Variants,
+  FMX.Types, FMX.Controls, FMX.Forms, FMX.Graphics, FMX.Dialogs, FMX.Objects,
+  FMX.Layouts, FMX.Controls.Presentation, FMX.StdCtrls, FMX.Edit, ShapeController,Connection, ConnectedShape;
+
+
+
+type
+
+  TMainForm = class(TForm)
+    Layout1: TLayout;
+    TrackBar1: TTrackBar;
+    Selection1: TSelection;
+    EdtLineType: TEdit;
+    Label1: TLabel;
+    EdtFirstHorizontal: TEdit;
+    EdtVertical: TEdit;
+    EdtLastHorizontal: TEdit;
+    Label3: TLabel;
+    Label4: TLabel;
+    Label5: TLabel;
+    Label2: TLabel;
+    Label6: TLabel;
+    Label7: TLabel;
+    Edt5FirstHorizontal: TEdit;
+    Edt5FirstVertical: TEdit;
+    Label8: TLabel;
+    Label9: TLabel;
+    Edt5LastHorizontal: TEdit;
+    Edt5SecondHorizontal: TEdit;
+    Label10: TLabel;
+    Label11: TLabel;
+    Edt5SecondVertical: TEdit;
+    EdtRect1Top: TEdit;
+    Label12: TLabel;
+    Label13: TLabel;
+    EdtRect1Bottom: TEdit;
+    Label14: TLabel;
+    EdtRect2Top: TEdit;
+    Label15: TLabel;
+    EdtRect2Bottom: TEdit;
+    BtnAdd: TButton;
+
+
+
+    procedure Rectangle1MouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Single);
+    procedure LayoutMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Single);
+    procedure LayoutMouseUp(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Single);
+    procedure FormCreate(Sender: TObject);
+    procedure FormDestroy(Sender: TObject);
+    procedure TrackBar1Change(Sender: TObject);
+
+     procedure RectangleSelected (Sender: TObject);
+     procedure Selection1Track(Sender: TObject);
+    procedure Selection1MouseUp(Sender: TObject; Button: TMouseButton;
+      Shift: TShiftState; X, Y: Single);
+    procedure Button2Click(Sender: TObject);
+    procedure Button1Click(Sender: TObject);
+    procedure BtnAddClick(Sender: TObject);
+    procedure Line1Click(Sender: TObject);
+
+
+  private
+    { Private declarations }
+    fConnector : TLine;
+
+    Manager : TRectController;
+  Protected
+
+     Procedure onDrawLine(Sender : TObject; LineCoords : TPathData; LineType : TLineType) ;
+     Procedure  Add;
+  public
+    { Public declarations }
+    procedure SetHittest(Rectangle: TConnectedShape; b: boolean);
+    procedure ResizeAll;
+  end;
+
+var
+  MainForm: TMainForm;
+
+implementation
+
+uses  Arrow;
+
+{$R *.fmx}
+const
+  MAX_RECTANGLES = 3;
+  RECT_WIDTH = 80;
+
+var
+  Grab: boolean = false;
+  Offset: tpointf;
+  MovingRectangle: TConnectedShape;
+  RectArray: array [0 .. MAX_RECTANGLES] of TConnectedShape;
+
+
+
+
+Procedure TMainForm.onDrawLine(Sender : TObject; LineCoords : TPathData; LineType : TLineType);
+Begin
+  edtLineType.text := inttostr(LineType);
+
+  if LineType = LineZ then
+  begin
+    EdtFirstHorizontal.Text := 'X:' + FloatToStr(LineCoords.Points[0].Point.x) +
+                               ' Y:' + FloatToStr(LineCoords.Points[0].Point.y) ;
+
+    EdtVertical.Text := 'X:' + FloatToStr(LineCoords.Points[1].Point.x) +
+                               ' Y:' + FloatToStr(LineCoords.Points[1].Point.y) ;
+
+
+    EdtLastHorizontal.Text := 'X:' + FloatToStr(LineCoords.Points[2].Point.x) +
+                               ' Y:' + FloatToStr(LineCoords.Points[2].Point.y) ;
+  end
+  else
+  begin
+     Edt5FirstHorizontal.Text :=  'X:' + FloatToStr(LineCoords.Points[0].Point.x) +
+                               ' Y:' + FloatToStr(LineCoords.Points[0].Point.y) ;
+     Edt5FirstVertical.Text :=  'X:' + FloatToStr(LineCoords.Points[1].Point.x) +
+                               ' Y:' + FloatToStr(LineCoords.Points[1].Point.y) ;
+
+
+     Edt5SecondHorizontal.Text :=  'X:' + FloatToStr(LineCoords.Points[2].Point.x) +
+                               ' Y:' + FloatToStr(LineCoords.Points[2].Point.y) ;
+
+
+     Edt5SecondVertical.Text :=  'X:' + FloatToStr(LineCoords.Points[3].Point.x) +
+                               ' Y:' + FloatToStr(LineCoords.Points[3].Point.y) ;
+
+
+     Edt5LastHorizontal.Text :=  'X:' + FloatToStr(LineCoords.Points[4].Point.x) +
+                               ' Y:' + FloatToStr(LineCoords.Points[4].Point.y) ;
+
+
+  end;
+End;
+
+
+procedure TMainForm.SetHittest(Rectangle: TConnectedShape; b: boolean);
+var
+  I: integer;
+begin
+  // turns all other rectangle hittest on or off
+  for I := 0 to Layout1.ChildrenCount - 1 do
+  begin
+    if Layout1.Children.Items[I] is TConnectedShape then
+    begin
+      if not(Layout1.Children.Items[I] = Rectangle) then
+      begin
+        (Layout1.Children.Items[I] as TConnectedShape).HitTest := b;
+      end;
+    end;
+  end;
+end;
+
+procedure TMainForm.ResizeAll;
+var
+  I: integer;
+begin
+
+  for I := 0 to Layout1.ChildrenCount - 1 do
+  begin
+    if Layout1.Children.Items[I] is TConnectedShape then
+    begin
+       with Layout1.Children.Items[I] as TConnectedShape do
+       begin
+         Height :=  RECT_WIDTH  * (trackbar1.Value /100) ;
+         width :=  RECT_WIDTH  * (trackbar1.Value /100)  ;
+         Selection1.Height := Height;
+         Selection1.Width := Width;
+       end;
+    end;
+  end;
+end;
+
+
+
+procedure TMainForm.TrackBar1Change(Sender: TObject);
+begin
+   //Edit1.Text := Floattostr(TrackBar1.Value);
+   ResizeAll;
+   invalidate;
+end;
+
+
+
+
+
+procedure TMainForm.BtnAddClick(Sender: TObject);
+begin
+ (*Manager.Add;
+  Manager.AddConnection(Manager.Shape[count-1],Manager.Shape[count]);
+      fConnector := Manager.AddConnection(Manager.Shape[0],Manager.Shape[1]);
+      fConnector.Parent := self;
+      fConnector.OnDrawLine := self.onDrawLine; *)
+end;
+
+procedure TMainForm.Button1Click(Sender: TObject);
+var
+  arrow : TArrow;
+begin
+  Arrow := TArrow.Create(Self);
+  Arrow.Parent := self;
+  Arrow.direction := West;
+end;
+
+procedure TMainForm.Button2Click(Sender: TObject);
+var
+
+  TargetPosition : TPosition;
+  VertLen : single;
+
+  rect : TREctf;
+
+  p1,p2 : Tpointf;
+
+  myLine : TLine;
+
+begin
+
+  (*myline := TLine.Create(Self);
+  myline.Parent := Layout1;
+
+  myline.HitTest := false;
+  myline.Visible := true;
+  //MyLine.position.X := 12;
+ // MyLine.Position.Y := 0;
+
+     *)
+
+
+
+    p1.Create(0,0);
+    p1.Create(100,50);
+    canvas.BeginScene;
+    canvas.drawline(p1,p2,1);
+    canvas.endScene;
+
+
+   (*
+   TargetPosition := RectArray[1].position;
+
+   //line connector;
+
+  //first horizontal
+   Line1.Position.X := RectArray[0].Position.X + RectArray[0].width ;
+   Line1.Position.Y := RectArray[0].Position.y + RectArray[0].height / 2 ;
+
+
+   //vertical line  - go down or up?
+
+
+   Line2.Position.X := Line1.Position.X + Line1.width;
+   Line2.Position.Y := Line1.Position.Y;
+
+   //What is the length of the vertical line?
+
+   if RectArray[0].position.y < TargetPosition.Y then
+   begin
+      VertLen := TargetPosition.Y - RectArray[0].position.y ;
+   end
+   else
+   begin
+      VertLen :=  RectArray[0].position.y - TargetPosition.Y ;
+    end;
+
+
+   Showmessage(floattostr(vertlen));
+   Line2.size.height := VertLen;
+
+
+    with rectangle1 do
+    begin
+    rect := TRectf.Create(0,10,100,100);
+      Canvas.BeginScene;
+      canvas.FillText(shaperect, 'Hello Text!', true,
+              0, [], TTextAlign.taCenter, TTextAlign.taCenter);
+      //Canvas.FillRect(Rect, 30, 60, AllCorners, 100);
+
+      Canvas.EndScene;
+    end;
+
+
+
+   //Line2.height := RectArray[1].position.y - targetposition.Y;
+
+   //last horizontal
+   Line3.Position.X := Line2.Position.X;
+
+
+
+   Line3.Position.Y := Line2.Position.Y + Line2.Height ;
+
+   *)
+end;
+
+
+Procedure TmainForm.Add;
+var
+  Rectangle : TConnectedShape;
+begin
+  (*Rectangle := TConnectedShape.Create(Self);  *)
+
+  Rectangle := Manager.Add;
+
+    With Rectangle do
+    begin
+      Parent := Layout1;
+      OnMouseDown := Rectangle1MouseDown;
+      OnMouseUp := LayoutMouseUp;
+      Width := RECT_WIDTH;
+      Height := RECT_WIDTH;
+      fill.Color := random($FFFFFF) or $FF000000;
+      Position.X := random(clientwidth - RECT_WIDTH);
+      Position.Y := random(clientheight - RECT_WIDTH);
+      //RectArray[] := Rectangle;
+    end;
+end;
+
+procedure TMainForm.FormCreate(Sender: TObject);
+var
+  I: integer;
+
+
+  rect : TRectf;
+
+
+
+begin
+
+  Manager := TRectController.create;
+
+
+  Layout1.HitTest:=false;
+
+
+
+
+  for I := 0 to MAX_RECTANGLES do
+  begin
+     add;
+   end;
+
+
+
+
+     (*
+     RectArray[0].Position.x := 50;
+     RectArray[0].Position.y := 50;
+
+     RectArray[1].Position.x := 100;
+     RectArray[1].Position.y := 100; *)
+
+
+    (* fConnector := TLine.create(Self,RectArray[0],RectArray[1] );
+     fConnector.Parent := self;
+     fConnector.OnDrawLine := self.onDrawLine;      *)
+
+
+    i := 1;
+
+    while i < MAX_RECTANGLES + 1 do
+    begin
+
+     // Manager.AddConnection(Manager.Shape[i-1],Manager.Shape[i]);
+      fConnector := Manager.AddConnection(Manager.Shape[i-1],Manager.Shape[i]);
+      fConnector.Fill.Color := Manager.Shape[i-1].Fill.color;
+      fConnector.Parent := self;
+      fConnector.OnDrawLine := self.onDrawLine;
+      fConnector.OnClick := Line1Click;
+
+
+      inc(i)
+    end;
+
+
+end;
+
+procedure TMainForm.FormDestroy(Sender: TObject);
+var
+  I: integer;
+begin
+  for I := Low(RectArray) to High(RectArray) do
+  begin
+    RectArray[I].Free;
+  end;
+
+  Manager.Free;
+end;
+
+procedure TMainForm.RectangleSelected(Sender: TObject);
+begin
+  Selection1.Visible := true;
+  Selection1.BringToFront;
+  //Selection1.SetFocus;
+  Selection1.Position := (Sender as Tcontrol).Position;
+  Selection1.Width := (Sender as Tcontrol).Width;
+  Selection1.Height := (Sender as Tcontrol).Height;
+  //name := TFmxObject(Sender).name;
+  //myhandle := FindComponent(name);
+end;
+
+procedure TMainForm.Selection1MouseUp(Sender: TObject; Button: TMouseButton;
+  Shift: TShiftState; X, Y: Single);
+begin
+  LayoutMouseUp(sender,Button,Shift,x,y);
+end;
+
+procedure TMainForm.Selection1Track(Sender: TObject);
+begin
+  MovingRectangle.SetBounds(Selection1.Position.X, Selection1.Position.Y,
+    Selection1.Width, Selection1.Height);
+  Invalidate;
+
+
+ // Selection1.Visible := false;
+end;
+procedure TMainForm.LayoutMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Single);
+begin
+  if Grab and (ssleft in Shift) then
+  begin
+    MovingRectangle.Position.X := X - Offset.X;
+    MovingRectangle.Position.Y := Y - Offset.Y;
+    Selection1.Visible := false;
+    Selection1.Position := Movingrectangle.Position;
+
+    //Edit4.Text := 'Mouse Move';
+
+    EdtRect1Top.Text := FloatToStr(fConnector.StartRectTopY);
+    EdtRect1Bottom.Text := FloatToStr(fConnector.StartRectBottomY);
+    EdtRect2Top.Text :=  FloatToStr(fConnector.EndRectangle.position.y);
+    EdtRect2Bottom.Text := FloatToStr(fConnector.EndRectangle.position.y + fConnector.EndRectangle.height);
+
+
+    Invalidate;
+  end;
+end;
+
+procedure TMainForm.LayoutMouseUp(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Single);
+begin
+  // used by both layout and rectangles
+  Grab := false;
+  SetHittest(MovingRectangle, true); // turn on all rectangle hittest
+  Layout1.HitTest := false;
+  MovingRectangle.HitTest := true;
+  //Edit3.Text := 'layout Mouse up';
+  Selection1.Visible := true;
+  //Selection1.SendToBack;
+  invalidate;
+end;
+
+procedure TMainForm.Line1Click(Sender: TObject);
+begin
+  ShowMessage('Click Line');
+end;
+
+procedure TMainForm.Rectangle1MouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState;
+  X, Y: Single);
+begin
+  MovingRectangle := Sender as TConnectedShape;
+
+  RectangleSelected(sender);
+
+  //Edit2.Text := 'Mouse Down';
+  //Showmessage('rect down');
+
+  //Offset.X := X;
+  //Offset.Y := Y;
+
+
+
+
+  SetHittest(MovingRectangle, false); // turn off all other rectangle hittest
+  Layout1.HitTest := true;
+  MovingRectangle.BringToFront; // optional
+  MovingRectangle.Repaint;
+  MovingRectangle.HitTest := false;
+  Grab := true;
+
+  //Selection1.position  := MovingRectangle.Position;
+  //Selection1.Width := MovingRectangle.width;
+  //Selection1.Height := MovingRectangle.Height;
+  //Selection1.Visible := true;
+end;
+end.
