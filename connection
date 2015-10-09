@@ -1,0 +1,455 @@
+unit connection;
+
+interface
+
+uses
+  System.SysUtils, System.Types, System.UITypes, System.Classes, System.Variants,
+  FMX.Types, FMX.Controls, FMX.Forms, FMX.Graphics, FMX.Dialogs, FMX.Objects,
+  FMX.Controls.Presentation, FMX.StdCtrls, FMX.Edit, arrow;
+
+
+Const
+   LineZ = 0;
+   Line2 = 1;
+
+
+
+type
+  TLineType = integer;
+
+  TDrawLineEvent = procedure(Sender : TObject; LineCoords : TPathData; LineType : TLineType) of object;
+
+TLine = Class(Tshape)
+  private
+    fpathData : TPathData;
+    fStartRect,fEndRect : TShape;
+    fOnDrawLine : TDrawLineEvent;
+    fArrow : TArrow;
+    fShowArrow : Boolean;
+
+  Protected
+    Function GetStartPos  : TPointf;
+    Function GetEndPos  : TPointF;
+    Function GetMidXYPos  : TPointF;
+    Procedure DrawLine  ;
+    Function DestXBeforeStartX : Boolean;
+    Function GetStartLineLength  : single;
+    Destructor Destroy; Override;
+    procedure paint;override;
+
+    Procedure DrawHorizontal(start, finish : TpointF);
+    Procedure DrawVertical(start,finish : TpointF);
+
+    function YPosFirstVertical5Line :Single;
+    function XposSecondHorizontalLine : Single;
+    Function YPosSecondVertical5Line : Single;
+
+    //property setters
+
+    Procedure  setStartRectangle(Value : TShape);
+    Procedure SetEndRectangle(value : TShape);
+
+
+    Procedure SetOnDrawLine(Value : TDrawLineEvent);
+    Function GetOnDrawLine : TDrawLineEvent;
+
+
+    function BottomY(Control : TShape) : single;
+    function TopY(Control : TShape) : Single;
+    function LeftX(Control : TShape) : Single;
+    Function RightX(Control : TShape) : Single;
+
+
+    Procedure DrawArrow(p : TPointF);
+    procedure SetShowArrow(value : Boolean);
+
+
+ Public
+     Procedure DrawZLine ;
+     Procedure Draw2Line ;
+     procedure DrawSimpleLine;
+
+     Constructor create (aOwner : TComponent; StartRect, EndRect : TShape );
+
+    function StartRectTopY : Single;
+    function StartRectBottomY : Single;
+
+    function EndRectTopY : Single;
+    function EndRectBottomY : Single;
+
+  published
+      property StartRectangle : TShape read fStartRect write setStartRectangle;
+      property EndRectangle : TShape read fEndRect write setEndRectangle;
+
+
+
+      //events
+
+      property OnDrawLine : TDrawLineEvent read GetOnDrawLine write  SetOnDrawLine;
+      property ShowArrow : Boolean read fShowArrow write SetShowArrow;
+      property Fill;
+      property OnClick;
+
+  End;
+
+
+implementation
+
+
+Procedure TLine.SetShowArrow(Value : Boolean);
+begin
+  fArrow.visible := value;
+end;
+
+Procedure TLine.DrawArrow(p : TPointF);
+begin
+
+  fArrow.Position.point := p;
+
+end;
+
+
+
+function TLine.LeftX(Control : TShape) : Single;
+begin
+  result := Control.Position.X;
+
+end;
+
+Function TLine.RightX(Control : TShape) : Single;
+begin
+ result := control.Position.X + control.width;
+end;
+
+
+function TLine.StartRectTopY : Single;
+begin
+  result := fStartRect.position.y
+end;
+
+
+function TLine.StartRectBottomY : Single;
+begin
+  result := fStartRect.position.y + fStartRect.height;
+end;
+
+function TLine.EndRectTopY : Single;
+begin
+  result := fEndRect.position.y
+end;
+
+function TLine.EndRectBottomY : Single;
+begin
+  result := fEndRect.position.y + fEndRect.height;
+end;
+
+
+
+function TLine.TopY(Control : TShape) : Single;
+begin
+  result := Control.position.y;
+end;
+
+function TLine.BottomY(Control : TShape) : single;
+begin
+  result := Control.Position.Y + Control.height ;
+end;
+
+Function TLine.XposSecondHorizontalLine : Single;
+begin
+  if BottomY(fEndRect)  < BottomY(fStartRect) then
+  begin
+
+  end
+  else
+  begin
+
+  end;
+end;
+
+Function TLine.YPosSecondVertical5Line : Single;
+begin
+  if BottomY(fEndRect)  < BottomY(fStartRect) then
+  begin
+
+  end
+  else
+  begin
+
+  end;
+end;
+
+
+
+function TLine.YPosFirstVertical5Line :Single;
+begin
+
+  if BottomY(fEndRect)  < BottomY(fStartRect) then
+  begin
+    //draw line upwards to a position between the start rect and endrect (which is above startrect)
+
+    //result :=  BottomY(fEndRect) + 5;
+    result := BottomY(fEndRect) + ((TopY(fStartRect) - BottomY(fEndRect))/2);
+
+
+
+  end
+  else
+  begin
+    result := TopY(fEndRect) - ((TopY(fEndRect) - BottomY(fStartRect))/2);;
+  end;
+end;
+
+Procedure TLine.SetOnDrawLine(Value : TDrawLineEvent);
+begin
+  if assigned(Value) then
+    fOnDrawLine := value;
+
+end;
+Function TLine.GetOnDrawLine : TDrawLineEvent;
+begin
+  if assigned(fOnDrawLine) then
+    result := fOnDrawLine;
+
+end;
+
+
+
+Procedure TLine.DrawHorizontal(start, finish : TpointF);
+begin
+
+end;
+
+
+Procedure TLine.DrawVertical(start,finish : TpointF);
+begin
+
+end;
+
+
+
+Procedure  TLine.setStartRectangle(Value : TShape);
+begin
+  fStartRect := value;
+  DrawZLine;
+  canvas.drawpath(fPathData,absoluteOpacity);
+end;
+
+Procedure TLine.SetEndRectangle(value : TShape);
+begin
+  fEndRect := value;
+  DrawZLine;
+  canvas.beginscene;
+  canvas.drawpath(fPathData,absoluteOpacity);
+  canvas.EndScene;
+end;
+
+
+ procedure TLine.paint;
+ begin
+   if not DestXBeforeStartX then
+   begin
+     DrawZLine ;
+
+     //Canvas.fill.Assign(self.fill);
+     //Canvas.fillpath(fPathdata,absoluteopacity);
+     if assigned(fOnDrawLine) then
+     begin
+       fOnDrawLine(self,fPathData,0);
+
+     end;
+   end
+   else
+   begin
+     Draw2Line;  //to be completed...
+
+
+
+
+     if assigned(fOnDrawLine) then
+     begin
+       fOnDrawLine(self,fPathData,1);
+
+     end;
+   end;
+
+
+
+
+
+   stroke.Color := fStartRect.Fill.Color;
+   canvas.drawpath(fPathData,absoluteOpacity);
+
+end;
+
+Constructor TLine.create (aOwner : TComponent; StartRect, EndRect : TShape );
+begin
+  inherited create(aOwner);
+  FPathData := TPathData.Create;
+  fStartRect := StartRect;
+  fendRect := EndRect;
+  fShowArrow := true;
+  fArrow := TArrow.Create(Self);
+  fArrow.Parent := self;
+end;
+
+(*Constructor TLine.Create(Canvas : TCanvas; StartRec, DestRec : TShape);
+begin
+   FPathData := TPathData.Create;
+   fCanvas := Canvas;
+end;  *)
+
+
+Destructor TLine.Destroy;
+begin
+  fPathData.free;
+  fArrow.Free;
+  inherited destroy;
+
+end;
+
+procedure TLine.DrawSimpleLine ;
+begin
+  fPathData.Clear;
+  fPathData.MoveTo(GetStartPos);
+  fPathData.LineTo(GetEndPos);
+
+  //DrawLine;
+end;
+
+
+Procedure TLine.DrawZLine ;
+
+begin
+  //draw a z amazingly enough
+  //3 lines
+  fPathData.Clear;
+  fPathData.MoveTo(GetStartPos );
+  fPathData.LineTo(GetMidXYPos);  //basically half way between the two rectangles
+
+  //draw a vertical line to half way between destination rect
+  fPathData.Lineto(pointF(GetMidXYPos.x, fEndRect.position.Y + fendrect.Height /2))   ;
+
+  //draw horizontal line to destination x
+  fPathData.LineTo(GetEndPos);
+
+
+
+  //draw arrow;
+
+
+
+    fArrow.position.y := fPathData.Points[3].Point.y - (fArrow.Height /2);
+   fArrow.Position.X := fPathData.Points[3].Point.x;
+end;
+
+Procedure TLine.Draw2Line  ;
+begin
+
+  //5 lines  kind of resembling a 2
+  fPathData.Clear;
+  fPathData.MoveTo(GetStartPos);
+
+  //line 1
+  fPathData.LineTo(pointf(getStartPos.X+ 10, Getstartpos.y));  //basically half way between the two rectangles
+
+  //draw a vertical line to half way between destination rect
+  //line 2
+  fPathData.Lineto( Pointf(getStartPos.X+ 10,  YPosFirstVertical5Line))   ;
+
+  //draw a horizontal line along the x axis to a point slightly before the x position of the target rectangle
+
+  //line 3
+  fPathData.Lineto(PointF(LeftX(fEndRect) - 10, YPosFirstVertical5Line));
+
+
+  //Line 4 -- line to midpoint end rect;
+  //draw a vertical line to half way between destination rect
+
+
+  //
+
+   fPathData.Lineto(pointf(LeftX(fEndRect)-10,  TopY(fEndRect) +  (BottomY(fEndRect) - TopY(fEndRect))/2));
+
+   fPathData.LineTo(pointf(LeftX(fEndRect),TopY(fEndRect) +  (BottomY(fEndRect) - TopY(fEndRect))/2) );
+
+   fArrow.position.y := fPathData.Points[5].Point.y - (fArrow.Height /2);
+   fArrow.Position.X := fPathData.Points[5].Point.x;
+end;
+
+Function TLine.DestXBeforeStartX : Boolean;
+begin
+  result := fEndRect.position.X <= fStartRect.position.X + fStartRect.width;
+end;
+
+ Function TLine.GetStartLineLength  : Single;
+ begin
+    if DestXBeforeStartX  then
+    begin
+      result := GetMidXYPos.x;
+    end
+    else
+    begin
+      result := 25;  //arbitrary length line away from current rect
+    end;
+
+ end;
+
+
+ Function TLine.GetMidXYPos  : TPointF;
+ var
+  p1, p2 : TPointf;
+
+ begin
+   p1 := GetStartPos;
+   p2 := GetEndPos;
+
+   if p1.x < p2.x then   //end rectangle is to the right of the start rect, which means a simple line can be drawn
+   begin
+     result := Pointf(p1.X + ((p2.x - p1.X) / 2),p1.y);  //mid point between them
+
+
+   end
+   else
+   begin
+     // result := Pointf(p2.X +(p1.X - p2.X) / 2,p1.y);
+     result := Pointf(p2.X + 20,p1.y);
+   end;
+
+
+ end;
+
+
+
+Function TLine.GetEndPos  : TPointF;
+begin
+   result :=  Pointf(fEndRect.position.X, (fEndRect.Position.Y + fEndRect.Height /2));
+
+    //result := pointf(144,216);
+
+    //showmessage('X : ' + floattostr(fEndRect.Position.X));
+end;
+
+
+Function TLine.GetStartPos : TPointf;
+Begin
+
+  result :=  Pointf((fStartRect.position.x + fStartRect.width), fStartRect.Position.Y + (fstartRect.Width /2));
+end;
+
+
+
+Procedure TLine.DrawLine;
+begin
+  try
+  if Canvas.BeginScene then
+  begin
+    Canvas.FillPath(fPathData,1);
+    canvas.DrawPath(fPathdata,1);
+  end;
+  finally
+    Canvas.EndScene ;
+  end;
+end;
+
+end.
