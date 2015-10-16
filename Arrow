@@ -1,0 +1,101 @@
+unit Arrow;
+interface
+uses
+  System.SysUtils, System.Types, System.UITypes, System.Classes, System.Variants,
+  FMX.Types, FMX.Controls, FMX.Forms, FMX.Graphics, FMX.Dialogs, FMX.Objects,
+  FMX.Controls.Presentation, FMX.StdCtrls, FMX.Edit;
+
+
+
+
+Type
+  TDirection = (North,South,East,West);
+
+  TArrow = Class(TShape)
+  private
+    fPathData : TPathData;
+    fDirection : TDirection;
+
+    Procedure UpdatePath;
+
+
+  Protected
+    Procedure Paint; Override;
+    procedure SetDirection(Value : TDirection);
+    Procedure Rotate;
+
+  Public
+     //surface properties here if needed
+     Constructor Create(aOwner : TComponent);override;
+     Destructor Destroy; Override;
+
+  Published
+     property Direction : TDirection read fDirection write SetDirection;
+     property Position;
+     property OnClick;
+  End;
+
+implementation
+
+Procedure TArrow.Rotate;
+begin
+  case fDirection of
+     North : begin
+
+     end;
+     South : begin
+
+     end;
+     East : begin
+       rotationAngle := 0;
+     end;
+     West : begin
+       rotationAngle := 180;
+     end;
+
+  end;
+
+end;
+
+procedure TArrow.SetDirection(Value : TDirection);
+begin
+  fDirection := Value;
+  Rotate;
+end;
+
+    Procedure TArrow.Paint;
+    begin
+       UpdatePath;
+       canvas.Fill.Assign(self.fill);
+       Canvas.FillPath(fPathData, absoluteopacity);
+       Canvas.DrawPath(fPathData,AbsoluteOpacity);
+      // canvas.
+    end;
+
+    Constructor TArrow.Create(aOwner : TComponent);
+    begin
+      inherited;
+      fPathData := TPathData.Create;
+      Width := 10;
+      Height :=10;
+      Hittest := true;
+      fill.Color := TAlphaColorRec.Yellow;
+    end;
+
+    Destructor TArrow.Destroy;
+    begin
+      fPathData.Free;
+      Inherited Destroy;
+
+    end;
+    Procedure TArrow.UpdatePath;
+    begin
+       fPathData.Clear;
+       fPathData.MoveTo(Pointf(0,0));
+       fPathData.LineTo(pointf(width,height/2));
+       fPathdata.LineTo(pointf(0,height));
+
+       fPathData.ClosePath;
+    end;
+
+end.
