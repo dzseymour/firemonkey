@@ -1,0 +1,158 @@
+unit ShapeController;
+
+
+interface
+ uses contnrs,System.SysUtils, System.Types, System.UITypes, System.Classes, System.Variants,
+  FMX.Types, FMX.Controls, FMX.Forms, FMX.Graphics, FMX.Dialogs, FMX.Objects,
+  FMX.Layouts, FMX.Controls.Presentation, FMX.StdCtrls, FMX.Edit, ConnectionDraw,ConnectedShape;
+
+
+
+type
+
+
+
+TRectController = class(TObject)
+private
+  fConnectedSHapeList : TObjectList;
+  fConnectionList : TObjectList;
+
+  fConnectedShape : TRectangle;
+  fConnection : TXLine;
+  fLayout : TScrollBox;
+protected
+
+    Function getConnectedShape(Index : integer) : TRectangle;
+    function getConnection(index : integer) : TXLine;
+
+    Function GetSHapeCount : integer;
+    function GetFirstShape : TRectangle;
+    function GetLastShape : TRectangle;
+
+
+    function GetConnectionCount : Integer;
+
+
+public
+   Function GetNextShape(CurrentShape : TRectangle) : TRectangle;
+   Function AddConnectedShape : TRectangle;
+   Function AddConnection(Start, Destination : TRectangle) : TXline;
+
+   Constructor Create(LayOut : TScrollBox);
+   destructor Destroy; Override;
+
+   property Shape[Item : Integer] : TRectangle read getConnectedShape;
+   Property Connection[Item : Integer] : TXline read getConnection;
+
+   property ShapeCount : Integer read getShapeCount;
+   property ConnectionCount : Integer read GetConnectionCount;
+
+
+
+   Property FirstShape : TRectangle read GetFirstShape;
+   property LastShape: TRectangle read GetLastShape;
+
+
+end;
+
+TPositionalRectController = class(TRectController)
+
+public
+  Function AddConnectedShape(point : TPointf) : TRectangle;
+end;
+
+
+
+implementation
+
+
+Function TRectController.GetNextShape(CurrentShape : TRectangle) : TRectangle;
+var
+  i  : integer;
+begin
+  for I := 0 to connectionCount -1 do
+  begin
+    if Connection[i].StartShape = CurrentShape then
+    begin
+      result := Connection[i].EndShape;
+    end;
+  end;
+end;
+
+function TRectController.getConnection(Index: Integer): TXLine;
+begin
+  result := TXLine(fConnectionList.items[index]);
+end;
+
+
+function  TRectController.GetFirstShape : TRectangle;
+begin
+   result :=  TRectangle(fConnectedSHapeList.First);
+
+end;
+function  TRectController.GetLastShape : TRectangle;
+begin
+ result := TRectangle(fConnectedSHapeList.Last);
+end;
+
+
+function TRectController.GetConnectionCount : Integer;
+begin
+  result := fConnectionList.Count;
+end;
+Function  TRectController.GetSHapeCount : integer;
+begin
+  result := fConnectedSHapeList.Count;
+end;
+
+Function TRectController.getConnectedShape(index : integer) : TRectangle;
+begin
+  result := TRectangle(fConnectedSHapeList.items[index]);
+end;
+
+ Constructor TRectController.Create(LayOut : TScrollBox);
+ begin
+   inherited create;
+   fConnectedSHapeList := TObjectList.Create;
+   fConnectionList := TObjectList.Create;
+   fLayout := Layout;
+ end;
+
+ destructor TRectController.Destroy;
+ begin
+   fConnectedSHapeList.Free;
+   fConnectionList.Free;
+   inherited destroy;
+ end;
+
+Function TRectController.AddConnectedShape : TRectangle;
+begin
+  fConnectedShape := TRectangle.Create(nil);
+  fConnectedSHapeList.Add(fConnectedShape);
+  result := fConnectedShape;
+end;
+
+Function TRectController.AddConnection(Start, Destination : TRectangle) : TXline;
+begin
+  if assigned(Start) and assigned(Destination) then
+  begin
+    fConnection := TXline.create(fLayout,Start, Destination);
+
+
+    //fConnection.Parent := start;
+
+    //fConnection.Parent := start;
+    fConnectionList.add(fConnection);
+    result := fConnection;
+  end;
+end;
+
+Function TPositionalRectController.AddConnectedShape(point : TPointf) : TRectangle;
+begin
+   result := inherited AddConnectedShape;
+   result.Position.Point := point;
+end;
+
+
+
+end.
