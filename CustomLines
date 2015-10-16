@@ -1,0 +1,119 @@
+unit CustomLines;
+
+interface
+uses
+  System.SysUtils, System.Types, System.UITypes, System.Classes, System.Variants,
+  FMX.Types, FMX.Controls, FMX.Forms, FMX.Graphics, FMX.Dialogs, FMX.Objects,
+  FMX.Layouts, FMX.Controls.Presentation, FMX.StdCtrls, FMX.Edit,
+  FMX.Effects, FMX.Filter.Effects, FMX.Menus;
+
+
+Type
+
+  TCustomLine = class(TLine)
+  private
+    fLength: Single;
+  protected
+    Procedure SetLength(value : Single); virtual;
+    Function GetLength : Single;
+    function GetStartPoint : TPointF;
+    function GetEndPoint : TPointF;
+
+  public
+    constructor  Create(aOwner : TComponent);override;
+    property Length : single read GetLength write SetLength;
+
+    property StartPoint : TPointf read GetStartPoint;
+    Property EndPoint : Tpointf read GetEndPoint;
+  end;
+
+
+  TVerticalLine = class(TCustomLine)
+  protected
+    Procedure SetLength(value : Single);   override;
+
+  public
+    constructor  Create(aOwner : TComponent);override;
+  end;
+
+
+
+
+  THorizontalLine = class(TCustomLine)
+  protected
+  Procedure SetLength(value : Single); override;
+
+  public
+    constructor Create(aOwner : TComponent);override;
+
+  end;
+
+
+
+implementation
+
+function TCustomLine.GetStartPoint : TPointF;
+begin
+  result := position.Point;
+end;
+
+function TCustomLine.GetEndPoint : TPointF;
+begin
+  result := pointf(position.X + width, position.Y + height);
+end;
+
+constructor  TCustomLine.create(aOwner : TComponent);
+begin
+  inherited;
+  LineLocation := TLineLocation.Inner;
+end;
+
+Procedure TCustomLine.SetLength(value : Single);
+begin
+   fLength := value;
+end;
+
+Function TCustomLine.GetLength : Single;
+begin
+  result := fLength;
+end;
+
+
+Procedure THorizontalLine.SetLength(value : Single);
+begin
+  inherited;
+  Width := Value;
+end;
+
+
+
+
+constructor THorizontalLine.create(aOwner : TComponent);
+begin
+  inherited;
+
+  Height := 1;
+  Width := 50;
+  LineType := TLineType.Bottom;
+end;
+
+
+constructor TVerticalLine.create(aOwner : TComponent);
+begin
+  inherited;
+  Width := 1;
+  Height := 50;
+  LineType := TLineType.Left;
+end;
+
+Procedure TVerticalLine.SetLength(value : Single);
+begin
+  inherited;
+  Height := value;
+end;
+
+
+
+
+
+end.
