@@ -1,0 +1,21 @@
+program RectangleMove;
+
+uses
+  System.StartUpCopy,
+  FMX.Forms,
+  RectMove in 'RectMove.pas' {MainForm},
+
+  Arrow in 'Arrow.pas',
+  ShapeController in 'ShapeController.pas',
+
+  CustomLines in 'CustomLines.pas',
+  ConnectionDraw in 'ConnectionDraw.pas',
+  ShapeLayoutManager in 'ShapeLayoutManager.pas';
+
+{$R *.res}
+
+begin
+  Application.Initialize;
+  Application.CreateForm(TMainForm, MainForm);
+  Application.Run;
+end.
