@@ -1,0 +1,686 @@
+unit ConnectionDraw;
+
+interface
+uses
+  Connection,System.SysUtils, System.Types, System.UITypes, System.Classes, System.Variants,
+  FMX.Types, FMX.Controls, FMX.Forms, FMX.Graphics, FMX.Dialogs, FMX.Objects,
+  FMX.Layouts, FMX.Controls.Presentation, FMX.StdCtrls, FMX.Edit,
+  FMX.Effects, FMX.Filter.Effects, FMX.Menus,contnrs,customLines,arrow;
+
+type
+
+
+TCustomConnectionDraw = class(TObject)
+ private
+   fOwner : TFMXObject;
+   fStartShape, fEndShape : TRectangle;
+   fOnMouseMOve : TMouseMoveEvent;
+
+   fCircles : TObjectList;
+   fLines : TObjectList;
+   fArrows : TObjectList;
+
+   fHitTest : Boolean;
+
+   //fOnClick : TNotifyEvent;
+   function  TopY(Control : TShape) : Single;
+   function  BottomY(Control : TShape) : single;
+   function YPosFirstVertical5Line :Single;
+   procedure CreateObjects; virtual;
+   Procedure DestroyObjects; virtual;
+
+   function GetCircle(index  : Integer) : TCircle;
+   function GetArrow(index : integer) : TArrow;
+   function GetLine(index : integer) : TCustomLine;
+   Procedure SetOnMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Single);
+   Procedure SetOnClick(Value : TNotifyEvent);
+
+   function DistanceBetweenX : Single;
+   Function DistanceBetweenY : Single;
+   Function DestXBeforeStartX : Boolean;
+
+   Procedure SetVisible(Value : Boolean);
+   procedure SetHitTest(Value : Boolean);
+
+ public
+   Procedure Draw;virtual; abstract;
+
+   Constructor Create(aOwner : TFmxObject;StartShape, EndShape : Trectangle);
+   Destructor Destroy;Override;
+
+   property Circle[index : integer] : TCircle read GetCircle;
+   property Line[index : integer] : TCustomLine read GetLine;
+   Property Arrow[index : integer] : TArrow read GetArrow;
+
+
+   //Property OnMouseMove : TMouseMoveEvent read fOnMouseMOve write setOnMouseMove;
+   Property OnClick : TNotifyEvent write SetOnClick;
+   property StartShape : TRectangle read fStartShape;
+   property EndShape : TRectangle read fEndShape;
+
+   Property HitTest : Boolean read fHitTest write SetHitTest;
+
+end;
+
+
+
+
+TZLine = class(TCustomConnectionDraw)
+private
+
+  a,b,c : TCustomLine;
+  Circle1,Circle2 : TCircle;
+  Arrow1,Arrow2 : TArrow;
+
+public
+  Procedure CreateObjects; Override;
+  Procedure Draw;Override;
+end;
+
+TSLine = class(TCustomConnectionDraw)
+private
+
+  a,b,c,d,e : TCustomLine;
+  Circle1,Circle2,Circle3,Circle4 : TCircle;
+  Arrow1,Arrow2 : TArrow;
+
+public
+  Procedure CreateObjects; Override;
+  Procedure Draw;Override;
+end;
+
+//an object which delegates drawing
+TXLine = class(TObject)
+private
+  fZLine : TZLine;
+  fSLine : TSLine;
+  fHitTest : Boolean;
+  fOnCLick : TNotifyEvent;
+  fLineBeingDrawn : integer;  //z or s
+protected
+  function  GetStartShape : TRectangle;
+  function  GetEndShape : TRectangle;
+  procedure SetHitTest(Value : Boolean);
+  procedure SetOnClick(Value : TNotifyEvent);
+  function GetArrow(index : Integer) : TArrow;
+
+Public
+   Procedure Draw;
+   Constructor Create(aOwner : TFmxObject;StartShape, EndShape : Trectangle);
+   Destructor Destroy; Override;
+
+   property StartShape : TRectangle read GetStartShape;
+   property EndShape : TRectangle read GetEndShape;
+   property HitTest : Boolean read fHitTest write SetHitTest;
+   Property OnClick : TNotifyEvent read fOnCLick write SetOnClick;
+   //Property Arrow[index : integer] : Tarrow read GetArrow;
+
+end;
+
+
+
+
+
+
+implementation
+
+function  TCustomConnectionDraw.BottomY(Control : TShape) : single;
+begin
+  result := Control.Position.Y + Control.height ;
+end;
+
+function TCustomConnectionDraw.TopY(Control : TShape) : Single;
+begin
+  result := Control.position.y;
+end;
+function TCustomConnectionDraw.YPosFirstVertical5Line :Single;
+begin
+
+  if BottomY(fEndShape)  < BottomY(fStartShape) then
+  begin
+    //draw line upwards to a position between the start rect and endrect (which is above startrect)
+
+    //result :=  BottomY(fEndRect) + 5;
+    result := BottomY(fEndShape) + ((TopY(fStartShape) - BottomY(fEndShape))/2);
+
+
+
+  end
+  else
+  begin
+    result := TopY(fEndShape) - ((TopY(fEndShape) - BottomY(fStartShape))/2);;
+  end;
+end;
+
+ procedure TCustomConnectionDraw.SetHitTest(Value : Boolean);
+ var
+ i : integer;
+begin
+
+  for i := 0  to fLines.count -1 do
+  begin
+    TLine(fLines.Items[i]).Hittest := value;
+  end;
+
+
+  for i := 0  to fArrows.count -1 do
+  begin
+    TArrow(fArrows.Items[i]).Hittest := value;
+  end;
+
+  for i := 0  to fCircles.count -1 do
+  begin
+    TCircle(fCircles.Items[i]).Hittest := value;
+  end;
+
+
+  fHitTest := value;
+ end;
+
+
+Procedure TCustomConnectionDraw.SetVisible(Value : Boolean);
+var
+ i : integer;
+begin
+  for i := 0  to fLines.count -1 do
+  begin
+    TLine(fLines.Items[i]).visible := value;
+  end;
+  for i := 0  to fArrows.count -1 do
+  begin
+    TArrow(fArrows.Items[i]).Visible := value;
+  end;
+
+  for i := 0  to fCircles.count -1 do
+  begin
+    TCircle(fCircles.Items[i]).Visible := value;
+  end;
+end;
+
+
+Function TCustomConnectionDraw.DestXBeforeStartX : Boolean;
+begin
+  result := fEndShape.position.X <= fStartShape.position.X + fStartShape.width;
+end;
+
+
+function TCustomConnectionDraw.DistanceBetweenX : Single;
+begin
+ result := fEndShape.position.X   - (fStartShape.position.X + fstartShape.width);
+end;
+
+function TCustomConnectionDraw.DistanceBetweenY : Single;
+begin
+ if fStartShape.position.y < fEndShape.position.y  then
+    result := fEndShape.position.y - (fStartShape.position.y + fstartShape.Height)
+ else
+   result := fStartShape.position.y - (fEndShape.position.y + fEndShape.Height);
+end;
+
+
+Procedure TCustomConnectionDraw.SetOnMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Single);
+begin
+
+end;
+
+
+function TCustomConnectionDraw.GetCircle(index  : Integer) : TCircle;
+begin
+  result := TCircle(fCircles.Items[index]);
+end;
+
+
+function TCustomConnectionDraw.GetArrow(index : integer) : TArrow;
+begin
+  result := TArrow(fArrows.Items[index]);
+end;
+
+function TCustomConnectionDraw.GetLine(index : integer) : TCustomLine;
+begin
+ result := TCustomLine(fLines.Items[index]);
+end;
+
+
+Constructor TCustomConnectionDraw.Create(aOwner : TFmxObject;StartShape, EndShape : Trectangle);
+begin
+  inherited create;
+  fStartShape := StartShape;    //local references
+  fEndShape := EndShape;
+  fOwner := aOwner;
+  CreateObjects;
+end;
+
+Destructor TCustomConnectionDraw.Destroy;
+begin
+  DestroyObjects;
+  inherited;
+end;
+
+
+
+procedure TCustomConnectionDraw.CreateObjects;
+begin
+  fCircles := TObjectList.create;  //list of shapes for reference
+  fLines := TObjectList.create;
+  fArrows := TObjectList.create;
+end;
+
+
+Procedure TCustomConnectionDraw.DestroyObjects;
+begin
+  inherited
+end;
+
+Procedure TCustomConnectionDraw.SetOnClick(Value : TNotifyEvent);
+var
+  i : integer;
+
+begin
+  for i := 0  to fLines.count -1 do
+  begin
+    TLine(fLines.Items[i]).OnClick := value;
+  end;
+  for i := 0  to fArrows.count -1 do
+  begin
+    TArrow(fArrows.Items[i]).OnClick := value;
+  end;
+
+  for i := 0  to fCircles.count -1 do
+  begin
+    TCircle(fCircles.Items[i]).OnClick := value;
+  end;
+end;
+
+
+
+Procedure TZLine.CreateObjects;
+begin
+  inherited;
+
+  //Lines
+  a := THorizontalLine.Create(fOwner);
+  a.Parent := fOwner;
+  b := TVerticalLine.Create(fOwner);
+  b.Parent := fOwner;
+  c := THorizontalLine.Create(fOwner);
+  c.Parent := fOwner;
+
+  fLines.Add(a);
+  fLines.add(b);
+  fLines.Add(c);
+
+  //Circles
+
+  Circle1 := TCircle.Create(fOwner);
+  Circle1.Parent := fOwner;
+  Circle1.Width := 10;
+  Circle1.Height := 10;
+  Circle1.Fill.Color := TAlphaColorRec.Red;
+
+  Circle2 := TCircle.Create(fOwner);
+  Circle2.Parent := fOwner;
+  Circle2.Width := 10;
+  Circle2.Height := 10;
+  Circle2.Fill.Color := TAlphaColorRec.Red;
+
+  fCircles.Add(Circle1);
+  fCircles.add(Circle2);
+
+
+  //Arrows
+  Arrow1 := TArrow.Create(fOwner);
+  Arrow1.Parent := fOwner;
+  Arrow1.Width := 10;
+  Arrow1.Height := 10;
+  Arrow1.Direction := East;
+  Arrow1.Fill.Color := TAlphaColorRec.Green;
+
+
+  Arrow2 := TArrow.Create(fOwner);
+  Arrow2.Parent := fOwner;
+  Arrow2.Width := 10;
+  Arrow2.Height := 10;
+  Arrow2.Direction := East;
+  Arrow2.Fill.Color := TAlphaColorRec.Red;
+
+  fArrows.Add(Arrow1);
+  fArrows.Add(Arrow2);
+
+
+  SetVisible(false);
+  //Draw(POintf(fStartShape.position.x + fStartShape.width, fStartShape.Position.Y+fStartShape.Height/2));
+end;
+
+Procedure TZLine.Draw;
+var
+  p : TPointf;
+
+begin
+  p :=  POintf(fStartShape.position.x + fStartShape.width, fStartShape.Position.Y+fStartShape.Height/2);
+
+  Arrow1.Position.x := p.x;
+  Arrow1.Position.Y := p.Y - Arrow1.Height/2;
+
+
+  //Line 1  - horizontal
+  a.Position.x := Arrow1.Position.x + Arrow1.Width;
+  a.Position.Y := p.Y ;
+  a.Length := DistanceBetweenX/2 - circle1.width/2;
+
+
+  //Circle
+
+  Circle1.Position.x := a.EndPoint.X - Circle1.Width/2;
+  Circle1.Position.Y := a.EndPoint.Y - Circle1.Height/2;
+
+
+
+  //Line 2 - vertical     -- check direction either up, or down
+
+  if fEndShape.position.Y > fStartShape.position.y then
+  begin
+    b.Length := DistanceBetweenY  + fStartShape.height - Circle1.Height/2;
+    b.Position.Point := a.EndPoint;
+    //b.Length := DistanceBetweenY  + fStartShape.height - Circle1.Height/2;
+
+     //circle
+
+    Circle2.Position.x := b.EndPoint.X - Circle2.Width/2;
+    Circle2.Position.Y := b.EndPoint.Y - Circle2.Height/2;
+
+
+  end
+  else
+  begin
+    b.Position.y := fEndShape.position.y + (fEndShape.Height/2);
+    b.Position.X := a.Position.X + a.Length;
+    b.Length :=  DistanceBetweenY + fStartShape.height - Circle1.Height/2;;
+
+
+    Circle2.Position.x := b.position.X - Circle2.Width/2;
+    Circle2.Position.Y := b.position.Y - Circle2.Height/2;
+  end;
+
+
+
+  c.Position.x := Circle2.position.x + Circle2.Width;
+  c.Position.Y := Circle2.Position.Y + (Circle2.Height/2);
+  c.Length := fEndShape.position.x - b.Endpoint.x - Arrow2.width;
+
+
+  //last Arrow
+  Arrow2.Position.x := c.EndPoint.x;
+  Arrow2.Position.Y := c.endpoint.y - Arrow2.Height/2;
+
+  SetVisible(true);
+
+end;
+
+Procedure TSLine.CreateObjects;
+begin
+  inherited;
+
+  //Lines
+
+
+  a := THorizontalLine.Create(fOwner);
+  a.Parent := fOwner;
+  b := TVerticalLine.Create(fOwner);
+  b.Parent := fOwner;
+  c := THorizontalLine.Create(fOwner);
+  c.Parent := fOwner;
+  d := TVerticalLine.Create(fOwner);
+  d.Parent := fOwner;
+  e := THorizontalLine.Create(fOwner);
+  e.Parent := fOwner;
+
+  fLines.Add(a);
+  fLines.add(b);
+  fLines.Add(c);
+  fLines.add(d);
+  fLines.Add(e);
+
+  //Circles
+
+  Circle1 := TCircle.Create(fOwner);
+  Circle1.Parent := fOwner;
+  Circle1.Width := 10;
+  Circle1.Height := 10;
+  Circle1.Fill.Color := TAlphaColorRec.Red;
+
+  Circle2 := TCircle.Create(fOwner);
+  Circle2.Parent := fOwner;
+  Circle2.Width := 10;
+  Circle2.Height := 10;
+  Circle2.Fill.Color := TAlphaColorRec.Red;
+
+  Circle3 := TCircle.Create(fOwner);
+  Circle3.Parent := fOwner;
+  Circle3.Width := 10;
+  Circle3.Height := 10;
+  Circle3.Fill.Color := TAlphaColorRec.Red;
+
+  Circle4 := TCircle.Create(fOwner);
+  Circle4.Parent := fOwner;
+  Circle4.Width := 10;
+  Circle4.Height := 10;
+  Circle4.Fill.Color := TAlphaColorRec.Red;
+
+
+  fCircles.Add(Circle1);
+  fCircles.add(Circle2);
+  fCircles.Add(Circle3);
+  fCircles.add(Circle4);
+
+
+
+
+  //Arrows
+  Arrow1 := TArrow.Create(fOwner);
+  Arrow1.Parent := fOwner;
+  Arrow1.Width := 10;
+  Arrow1.Height := 10;
+  Arrow1.Direction := East;
+  Arrow1.Fill.Color := TAlphaColorRec.Green;
+
+
+  Arrow2 := TArrow.Create(fOwner);
+  Arrow2.Parent := fOwner;
+  Arrow2.Width := 10;
+  Arrow2.Height := 10;
+  Arrow2.Direction := East;
+  Arrow2.Fill.Color := TAlphaColorRec.Red;
+
+  fArrows.Add(Arrow1);
+  fArrows.Add(Arrow2);
+  SetVisible(False);
+  //Draw(POintf(fStartShape.position.x + fStartShape.width, fStartShape.Position.Y+fStartShape.Height/2));
+end;
+
+Procedure TSLine.Draw ;
+var
+  p : TPointf;
+begin
+   P := POintf(fStartShape.position.x + fStartShape.width, fStartShape.Position.Y+fStartShape.Height/2);
+  //Arrow1
+
+  Arrow1.Position.x := p.x;
+  Arrow1.Position.Y := p.Y - Arrow1.Height/2;
+
+
+  //Line 1  - horizontal
+  a.Position.x := Arrow1.Position.x + Arrow1.Width;
+  a.Position.Y := p.Y ;
+  a.Length := 20;
+
+
+  //Circle
+
+  Circle1.Position.x := a.EndPoint.X - Circle1.Width/2;
+  Circle1.Position.Y := a.EndPoint.Y - Circle1.Height/2;
+
+
+  if fEndShape.position.Y > fStartShape.position.y then
+  begin
+  //Line 2 - vertical
+    b.Position.Point := a.EndPoint;
+    b.Length := (DistanceBetweenY  + fStartShape.height - Circle1.Height/2) /2;
+
+
+    Circle2.Position.x := b.EndPoint.X - Circle2.Width/2;
+    Circle2.Position.Y := b.EndPoint.Y - Circle2.Height/2;
+
+  end
+  else
+  begin
+    b.Position.y := (fEndShape.Position.Y + fEndShape.Height) + ((fStartShape.Position.Y-(fEndShape.Position.Y + fEndShape.Height))/2);// - (fEndShape.position.y);
+    b.Position.X := a.Position.X + a.Length;
+    b.Length :=  Circle1.Position.Y  - b.Position.y;
+
+
+    Circle2.Position.x := b.position.X - Circle2.Width/2;
+    Circle2.Position.Y := b.position.Y - Circle2.Height/2;
+
+  end;
+
+
+
+
+
+
+
+  //horizontal line 1 - to point before the dest rect
+  c.Position.x := fEndShape.Position.X - 10;
+  c.Position.Y := Circle2.Position.Y + (Circle2.Height/2);
+  c.Length := Circle2.Position.X - c.Position.x;
+
+
+
+
+  //cirlce
+  Circle3.Position.x := c.position.X - Circle2.Width/2;
+  Circle3.Position.Y := c.position.Y - Circle2.Height/2;
+
+
+
+
+  //vertical
+
+
+  if fEndShape.position.Y > fStartShape.position.y then
+  begin
+    d.Position.X := c.Position.X;
+    d.Position.Y := c.Position.Y;
+    d.Length := (DistanceBetweenY  + fStartShape.height - Circle1.Height/2) /2;
+    //circle
+    Circle4.Position.x := d.endpoint.X - Circle2.Width/2;
+    Circle4.Position.y := d.Endpoint.Y - Circle2.Height/2;
+  end
+  else
+  begin
+    d.Position.y := (fEndShape.Position.Y + (fEndShape.Height/2));
+    d.Position.X := Circle3.Position.X + (Circle3.Width/2);
+    d.Length :=  Circle3.Position.Y - d.Position.y;
+
+
+    Circle4.Position.x := d.position.X - Circle2.Width/2;
+    Circle4.Position.Y := d.position.Y - Circle2.Height/2;
+
+
+
+  end;
+
+
+  //Line
+
+
+  //e.Position.Y := c.Position.Y;
+  //e.Length := (DistanceBetweenY  + fStartShape.height - Circle1.Height/2) /2;
+
+
+
+  //last Arrow
+
+  if fEndShape.position.Y > fStartShape.position.y then
+  begin
+    e.position.point := d.EndPoint;
+    e.Length := 20 - arrow2.width;
+    Arrow2.Position.x := e.position.x;
+    Arrow2.Position.Y := e.position.y - (Arrow2.Height/2);
+  end
+  else
+  begin
+     e.Position.point := d.position.Point;
+    e.Length := 20 - arrow2.width;
+
+    Arrow2.Position.point := e.EndPoint;
+    Arrow2.Position.Y := e.endpoint.y - Arrow2.Height/2;
+  end;
+
+  SetVisible(true);
+end;
+
+
+Constructor TXline.Create(aOwner : TFmxObject;StartShape, EndShape : Trectangle);
+begin
+  inherited create;
+  fZLine := TZline.Create(aOwner,StartShape, EndShape);
+  fSLine := TSline.Create(aOwner,StartShape, EndShape);
+end;
+
+Destructor TXline.Destroy;
+begin
+  fZLine.Destroy;
+  fSLine.Destroy;
+  inherited;
+end;
+
+Procedure TXline.Draw;
+begin
+   if fZLine.DestXBeforeStartX then
+   begin
+     fZLine.setvisible(false);
+     fSLine.Draw;
+
+   end
+   else
+   begin
+     fSLine.SetVisible(false);
+
+      fZLine.Draw;
+   end;
+end;
+
+
+function  TXline.GetStartShape : TRectangle;
+begin
+  result := fZLine.startShape; //doesn't really matter which one we use
+end;
+
+function  TXline.GetEndShape : TRectangle;
+begin
+  result := fZLine.EndShape;
+end;
+
+procedure TXline.SetHitTest(Value : Boolean);
+begin
+  fZLine.Hittest := value;
+  fSLine.HitTest := value;
+  fHitTest := value;
+end;
+
+
+procedure TXline.SetOnClick(Value : TNotifyEvent);
+begin
+  fZLine.OnClick := value;
+  fSLine.OnClick := value;
+  fOnClick := value;
+end;
+
+
+function TXline.GetArrow(index : Integer) : TArrow;
+begin
+  //result :=
+end;
+
+end.
