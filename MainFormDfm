@@ -1,0 +1,79 @@
+object MainForm: TMainForm
+  Left = 0
+  Top = 0
+  Caption = 'Form33'
+  ClientHeight = 480
+  ClientWidth = 2000
+  FormFactor.Width = 320
+  FormFactor.Height = 480
+  FormFactor.Devices = [Desktop]
+  OnCreate = FormCreate
+  OnDestroy = FormDestroy
+  DesignerMasterStyle = 0
+  object TrackBar1: TTrackBar
+    Align = Right
+    CanParentFocus = True
+    Orientation = Vertical
+    Margins.Left = 10.000000000000000000
+    Margins.Top = 10.000000000000000000
+    Margins.Right = 10.000000000000000000
+    Margins.Bottom = 10.000000000000000000
+    Position.X = 1971.000000000000000000
+    Position.Y = 10.000000000000000000
+    Size.Width = 19.000000000000000000
+    Size.Height = 460.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 0
+    Value = 100.000000000000000000
+    OnChange = TrackBar1Change
+  end
+  object PopupMenu1: TPopupMenu
+    Left = 8
+    Top = 8
+    object MenuItem1: TMenuItem
+      Text = 'Add'
+    end
+  end
+  object Layout1: TScrollBox
+    Align = Client
+    DragMode = dmAutomatic
+    Size.Width = 1961.000000000000000000
+    Size.Height = 480.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 5
+    OnMouseMove = LayoutMouseMove
+    OnMouseUp = LayoutMouseUp
+    OnHScrollChange = Layout1HScrollChange
+    Viewport.Width = 1961.000000000000000000
+    Viewport.Height = 480.000000000000000000
+    object Selection1: TSelection
+      GripSize = 3.000000000000000000
+      HideSelection = False
+      Proportional = False
+      Position.X = 240.000000000000000000
+      Position.Y = 152.000000000000000000
+      Size.Width = 105.000000000000000000
+      Size.Height = 97.000000000000000000
+      Size.PlatformDefault = False
+      Visible = False
+      OnMouseUp = Selection1MouseUp
+      OnTrack = Selection1Track
+    end
+    object BtnAdd: TButton
+      Position.X = 45.000000000000000000
+      Position.Y = 376.000000000000000000
+      TabOrder = 7
+      Text = 'Add'
+      OnClick = BtnAddClick
+    end
+    object Button3: TButton
+      Position.X = 192.000000000000000000
+      Position.Y = 376.000000000000000000
+      Size.Width = 105.000000000000000000
+      Size.Height = 22.000000000000000000
+      Size.PlatformDefault = False
+      TabOrder = 8
+      Text = 'Just Selected'
+    end
+  end
+end
