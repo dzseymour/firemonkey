@@ -1,0 +1,21 @@
+unit ShapeLayoutManager;
+
+interface
+
+
+//A3 3508,4961      pixels
+
+
+implementation
+
+Type
+
+TCustomLayOut = class(TObject)
+
+end;
+
+
+
+
+
+end.
