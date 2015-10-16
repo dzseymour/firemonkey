@@ -1,0 +1,380 @@
+unit RectMove;
+
+interface
+
+uses
+  System.SysUtils, System.Types, System.UITypes, System.Classes, System.Variants,
+  FMX.Types, FMX.Controls, FMX.Forms, FMX.Graphics, FMX.Dialogs, FMX.Objects,
+  FMX.Layouts, FMX.Controls.Presentation, FMX.StdCtrls, FMX.Edit, ShapeController,Connection, ConnectedShape,
+  FMX.Effects, FMX.Filter.Effects, FMX.Menus, ConnectionDraw;
+
+
+
+type
+
+  TMainForm = class(TForm)
+    Layout1: TScrollBox;
+    TrackBar1: TTrackBar;
+    Selection1: TSelection;
+    BtnAdd: TButton;
+    PopupMenu1: TPopupMenu;
+    MenuItem1: TMenuItem;
+    Button3: TButton;
+
+
+
+    procedure Rectangle1MouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Single);
+    procedure LayoutMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Single);
+    procedure LayoutMouseUp(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Single);
+    procedure FormCreate(Sender: TObject);
+    procedure FormDestroy(Sender: TObject);
+    procedure TrackBar1Change(Sender: TObject);
+
+    procedure RectangleSelected (Sender: TObject);
+    procedure Selection1Track(Sender: TObject);
+    procedure Selection1MouseUp(Sender: TObject; Button: TMouseButton;
+      Shift: TShiftState; X, Y: Single);
+    procedure Button2Click(Sender: TObject);
+    procedure BtnAddClick(Sender: TObject);
+    procedure Line1Click(Sender: TObject);
+    procedure Button1Click(Sender: TObject);
+    procedure Layout1HScrollChange(Sender: TObject);
+
+
+  private
+    { Private declarations }
+
+    fConnector : TXLine;
+    fManager : TPositionalRectController;
+
+    fGrab: boolean;
+    fOffset: tpointf;
+    fMovingRectangle: TRectangle;
+
+  Protected
+    // Procedure onDrawLine(Sender : TObject; LineCoords : TPathData; LineType : TLineType) ;
+     Function  Add(point : Tpointf) : TRectangle;
+
+
+  public
+    { Public declarations }
+    procedure SetHittest(Rectangle: TRectangle; b: boolean);
+    procedure ResizeAll;
+
+    Property Manager : TPositionalRectController read fManager;
+    Property MovingRectangle : TRectangle read fMovingRectangle write fMovingRectangle;
+  end;
+
+var
+  MainForm: TMainForm;
+
+implementation
+
+uses  Arrow;
+
+{$R *.fmx}
+const
+  MAX_RECTANGLES = 3;
+  RECT_WIDTH = 80;
+  RECT_HEIGHT = 20;
+
+  ColumnWidth = RECT_WIDTH + 10;
+
+  ColumnHeight = RECT_HEIGHT + 10;
+
+
+
+
+
+
+
+
+
+
+procedure TMainForm.SetHittest(Rectangle: TRectangle; b: boolean);
+var
+  I: integer;
+begin
+  // turns all other rectangle hittest on or off
+
+
+
+
+  for I := 0 to fManager.shapeCount - 1 do
+  begin
+     Manager.Shape[i].HitTest := b;
+
+     //turn off the hit test for all the line objects not associated with this rectangle.
+
+  end;
+
+
+  for I  := 0 to Manager.ConnectionCount - 1 do
+  begin
+   Manager.Connection[i].HitTest := b;
+  end;
+end;
+
+procedure TMainForm.ResizeAll;
+var
+  I: integer;
+begin
+
+  for I := 0 to Layout1.ChildrenCount - 1 do
+  begin
+    if Layout1.Children.Items[I] is TConnectedShape then
+    begin
+       with Layout1.Children.Items[I] as TConnectedShape do
+       begin
+         Height :=  RECT_WIDTH  * (trackbar1.Value /100) ;
+         width :=  RECT_WIDTH  * (trackbar1.Value /100)  ;
+         Selection1.Height := Height;
+         Selection1.Width := Width;
+       end;
+    end;
+  end;
+end;
+
+
+
+procedure TMainForm.TrackBar1Change(Sender: TObject);
+begin
+   //Edit1.Text := Floattostr(TrackBar1.Value);
+   ResizeAll;
+   invalidate;
+end;
+
+
+
+
+
+procedure TMainForm.BtnAddClick(Sender: TObject);
+var
+
+  ConnectedSHape ,
+  LastShape   : TRectangle;
+  p : Tpointf;
+
+  Next : TRectangle;
+
+
+begin
+
+  Next := Manager.Getnextshape(MovingRectangle);
+
+  if assigned(Next) then
+  begin
+    p.X := Next.position.X ;
+    p.Y := Next.position.Y + Next.Height + RECT_HEIGHT + layout1.ViewportPosition.y;
+  end
+  else
+  begin
+    p.X := MovingRectangle.position.X + MovingRectangle.Width + RECT_WIDTH + layout1.ViewportPosition.x;
+    p.Y := MovingRectangle.position.Y + MovingRectangle.Height + RECT_HEIGHT + layout1.ViewportPosition.y;
+
+  end;
+
+  ConnectedShape := Add( p);
+  fConnector := Manager.AddConnection(MovingRectangle,ConnectedShape);
+  fConnector.Draw;
+end;
+
+procedure TMainForm.Button1Click(Sender: TObject);
+begin
+  Showmessage('hittest');
+end;
+
+procedure TMainForm.Button2Click(Sender: TObject);
+var
+  i : integer;
+begin
+ for I  := 0 to Manager.ConnectionCount - 1 do
+  begin
+    Manager.Connection[i].HitTest := false;
+  end;
+end;
+
+
+Function TmainForm.Add(point : Tpointf) : TRectangle;
+var
+  Rectangle : TRectangle;
+begin
+  Rectangle := Manager.AddConnectedShape(Point);
+  With Rectangle do
+  begin
+    Parent := Layout1;
+    OnMouseDown := Rectangle1MouseDown;
+    OnMouseUp := LayoutMouseUp;
+    Width := Rect_Width;
+    Height := Rect_Height;
+    fill.Color := random($FFFFFF) or $FF000000;
+  end;
+
+  result := Rectangle;
+end;
+
+procedure TMainForm.FormCreate(Sender: TObject);
+var
+  I: integer;
+  rect : TRectf;
+
+  P : Tpointf;
+begin
+
+
+  fManager := TPositionalRectController.create(Layout1);
+
+
+  Layout1.HitTest:=false;
+
+  P := pointf(25,25);
+  for I := 0 to MAX_RECTANGLES-1  do
+  begin
+     add(p);
+
+      MovingRectangle := Manager.Shape[0];
+
+
+      p.X := Manager.LastShape.position.X + Manager.LastShape.Width + RECT_WIDTH;
+      p.Y := Manager.LastShape.position.Y + Manager.LastShape.Height + RECT_HEIGHT;
+
+   end;
+
+
+  MovingRectangle := Manager.Shape[0];
+
+
+
+    i := 1;
+
+    while i < MAX_RECTANGLES do
+    begin
+
+
+      fConnector := Manager.AddConnection(Manager.Shape[i-1],Manager.Shape[i]);
+      fConnector.OnClick := Button1Click;
+      fConnector.Draw;
+
+      inc(i);
+    end;
+
+
+end;
+
+procedure TMainForm.FormDestroy(Sender: TObject);
+begin
+  Manager.Free;
+end;
+
+procedure TMainForm.RectangleSelected(Sender: TObject);
+begin
+
+  Selection1.Position := (Sender as Tcontrol).Position;
+  Selection1.Width := (Sender as Tcontrol).Width;
+  Selection1.Height := (Sender as Tcontrol).Height;
+
+end;
+
+procedure TMainForm.Selection1MouseUp(Sender: TObject; Button: TMouseButton;
+  Shift: TShiftState; X, Y: Single);
+begin
+  LayoutMouseUp(sender,Button,Shift,x,y);
+end;
+
+procedure TMainForm.Selection1Track(Sender: TObject);
+begin
+  MovingRectangle.SetBounds(Selection1.Position.X, Selection1.Position.Y,
+    Selection1.Width, Selection1.Height);
+  Invalidate;
+
+
+ // Selection1.Visible := false;
+end;
+procedure TMainForm.Layout1HScrollChange(Sender: TObject);
+begin
+   //Manager.Connect[0].paint
+end;
+
+procedure TMainForm.LayoutMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Single);
+var
+  i : integer;
+begin
+  if fGrab and (ssleft in Shift) then
+  begin
+
+    MovingRectangle.Position.X := layout1.ViewportPosition.x + X - fOffset.X;
+    MovingRectangle.Position.Y := layout1.ViewportPosition.Y + Y - fOffset.Y;
+
+    //need to get the right connector. How?
+    for I := 0 to Manager.connectionCount -1 do
+    begin
+      if Manager.Connection[i].startShape = MovingRectangle then
+      begin
+        Manager.Connection[i].draw;
+      end;
+
+      //You also need to redraw the connection to this rectangle.
+      if Manager.Connection[i].EndShape = MovingRectangle then
+      begin
+        Manager.Connection[i].draw;
+      end;
+
+   end;
+
+
+
+
+
+
+    Selection1.Visible := false;
+    Selection1.Position := Movingrectangle.Position;
+
+
+  end;
+end;
+
+procedure TMainForm.LayoutMouseUp(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Single);
+begin
+  // used by both layout and rectangles
+  fGrab := false;
+  SetHittest(MovingRectangle, true); // turn on all rectangle hittest
+  Layout1.HitTest := false;
+  MovingRectangle.HitTest := true;
+
+
+
+
+  Selection1.Visible := true;
+
+  invalidate;
+end;
+
+procedure TMainForm.Line1Click(Sender: TObject);
+begin
+  Showmessage('line is being ');
+
+
+end;
+
+procedure TMainForm.Rectangle1MouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState;
+  X, Y: Single);
+begin
+  MovingRectangle := Sender as TRectangle;
+
+  RectangleSelected(sender);
+  fOffset.X := X;
+  fOffset.Y := Y;
+
+
+
+
+  SetHittest(MovingRectangle, false); // turn off all other rectangle hittest
+  Layout1.HitTest := true;
+  MovingRectangle.BringToFront; // optional
+  MovingRectangle.Repaint;
+  MovingRectangle.HitTest := false;
+  fGrab := true;
+
+
+end;
+end.
